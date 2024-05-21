@@ -39,17 +39,39 @@ def plot_images(dataloader):
     plt.close() 
     
 def load_npy_data(color_path, gray_path, size=224, n=100, batch_size=32, test=True, p_train=0.8, num_workers=4, pin_memory=False):
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: 2*x - 1), transforms.Resize((size,size), antialias=True)])
+    color_data = np.load(color_path)
+    gray_data = np.load(gray_path)
+    if "ab2.npy" in color_path:
+        gray_data = gray_data[10000:]
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Lambda(lambda x: 2*x - 1), 
+                                    transforms.Resize((size,size), antialias=True)])
 
-    color_data = np.load(color_path)[:n] #ToTensor already normalizes to [0,1]
-    gray_data = np.load(gray_path)[:n]
+    n = min(n, len(color_data), len(gray_data))
+    color_data = color_data[:n] #ToTensor already normalizes to [0,1]
+    gray_data = gray_data[:n]
 
+    indices = np.random.choice(len(color_data), n, replace=False)
+    
+    color_data = color_data[indices]
+    gray_data = gray_data[indices]
+    
     if test:
-        color_data_train = color_data[:int(n*p_train)]
-        gray_data_train = gray_data[:int(n*p_train)]
+        train_size = int(n * p_train)
+        
+        train_indices = np.random.choice(n, size=train_size, replace=False)
+        test_indices = np.setdiff1d(np.arange(n), train_indices)
+
+        color_data_train = color_data[train_indices]
+        gray_data_train = gray_data[train_indices]
+        
+        color_data_test = color_data[test_indices]
+        gray_data_test = gray_data[test_indices]
+
         train_dataset = [(transform(gray), transform(color)) for color, gray in zip(color_data_train, gray_data_train)]
         
-        test_dataset = [(transform(gray), transform(color)) for color, gray in zip(color_data[int(n*p_train):], gray_data[int(n*p_train):])]
+        test_dataset = [(transform(gray), transform(color)) for color, gray in zip(color_data_test, gray_data_test)]
+        
         return DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory), DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
         
     color_dataset = [(transform(gray), transform(color)) for color, gray in zip(color_data, gray_data)]
