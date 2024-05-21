@@ -65,6 +65,7 @@ def main():
         generator = UNet(in_channels=1, out_channels=2, image_size=256)
         print(f"Generator is UNet from models.py")
         name = f"{args.save_path}/pretrained/generator_{args.epochs}_{args.n_images}.pth"
+    print("Saving at path", name)
     init_weights(generator)
     
     train(generator, dl, epochs=args.epochs)
