@@ -1,9 +1,8 @@
 import torch
-from tqdm import tqdm
 from rich.progress import Progress #ima se, može se
 from data import visualize, load_npy_data
 import numpy as np
-from unet import UNet, Discriminator
+from models import UNet, Discriminator
 import argparse
 import os
 import json
@@ -50,17 +49,15 @@ def train_wgan(generator, discriminator, train_loader, optimizer_gen, optimizer_
                 set_requires_grad(discriminator, True)
                 optimizer_disc.zero_grad()
                 
-                # Real images
                 real_output = discriminator(trainL, trainAB)
                 real_loss = -torch.mean(real_output)
                 
-                # Fake images
                 fakeAB = generator(trainL)
                 fake_output = discriminator(trainL, fakeAB.detach())
                 fake_loss = torch.mean(fake_output)
                 
                 # Gradient penalty
-                gp = gradient_penalty(discriminator, trainAB, fakeAB, trainL, device)
+                gp = gradient_penalty(discriminator, trainAB, fakeAB.detach(), trainL, device)
                 
                 disc_loss = real_loss + fake_loss + lambda_gp * gp
                 disc_loss.backward()
@@ -202,7 +199,6 @@ def train_gan_argparser():
     parser.add_argument("--n", type=int, default=400, help="Number of images to visualize")
     parser.add_argument("--load_generator", type=str, default=None, help="Path to load generator model")
     parser.add_argument("--lambda_gp", type=float, default=10, help="Weight for the gradient penalty")
-    parser.add_argument("--lambda_g", type=float, default=0.1, help="Weight for the generator loss in WGAN")
     parser.add_argument("--ab_path", type=str, default="ab/ab/ab1.npy", help="Path to AB images")
     parser.add_argument("--l_path", type=str, default="l/gray_scale.npy", help="Path to L images")
 
@@ -212,12 +208,12 @@ def main(type):
     if type=="gan":
         train_gan(generator, discriminator, trainLoader, optimizer_gen, optimizer_disc,
               lambda_recon=args.lambda_recon, device=args.device, epochs=args.epochs,
-              verbose=args.verbose, save_model=args.save_model, save_path=args.save_path,
+              save_model=args.save_model, save_path=args.save_path,
               n=args.n, plot_images=False)
     else:
         train_wgan(generator, discriminator, trainLoader, optimizer_gen, optimizer_disc,
-              lambda_recon=args.lambda_recon, lambda_gp=args.lambda_gp, lambda_g=args.lambda_g, device=args.device, epochs=args.epochs,
-              verbose=args.verbose, save_model=args.save_model, save_path=args.save_path,
+              lambda_recon=args.lambda_recon, lambda_gp=args.lambda_gp, device=args.device, epochs=args.epochs,
+              save_model=args.save_model, save_path=args.save_path,
               plot_images=False)
         
 if __name__ == "__main__":
