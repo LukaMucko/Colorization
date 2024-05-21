@@ -3,19 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
     
 class Up(nn.Module):
-    def __init__(self, in_channels, out_channels, instance_norm=True, dropout=False):
+    def __init__(self, in_channels, out_channels, batch_norm=True, dropout=False):
         super(Up, self).__init__()
         self.up = nn.ConvTranspose2d(in_channels, out_channels, 4, stride=2, padding=1) #(n-1)s - 2p + k = 2n
         self.dropout = dropout
-        self.instance_norm = instance_norm
-        self.instance = nn.InstanceNorm2d(out_channels)
+        self.batch_norm = batch_norm
+        self.bn = nn.BatchNorm2d(out_channels)
         self.drop = nn.Dropout2d(0.5)
         self.relu = nn.ReLU(True)
     
     def forward(self, x, skip=None):
         x = self.up(self.relu(x))
-        if self.instance_norm:
-            x = self.instance(x)
+        if self.batch_norm:
+            x = self.bn(x)
         if self.dropout:
             x = self.drop(x)
         if skip is not None:
@@ -24,12 +24,12 @@ class Up(nn.Module):
         
     
 class Down(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=2, activation=True, instance_norm=True):
+    def __init__(self, in_channels, out_channels, stride=2, activation=True, batch_norm=True):
         super(Down, self).__init__()
         self.down = nn.Conv2d(in_channels, out_channels, 4, stride=stride, padding=1)
         self.leaky_relu = nn.LeakyReLU(0.2)
-        self.InstanceNorm = nn.InstanceNorm2d(out_channels)
-        self.batch_norm = instance_norm
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.batch_norm = batch_norm
         self.activation = activation
         
     def forward(self, x):
@@ -37,7 +37,7 @@ class Down(nn.Module):
         if self.activation:
             x = self.leaky_relu(x)
         if self.batch_norm:
-            x = self.InstanceNorm(x)
+            x = self.bn(x)
         return x
 
 class UNet(nn.Module):
@@ -45,14 +45,14 @@ class UNet(nn.Module):
         super().__init__()
         assert image_size % 2**8 == 0, 'image size must be a multiple of 256'
         
-        self.down1 = Down(in_channels, 64, activation=False, instance_norm=False)
+        self.down1 = Down(in_channels, 64, activation=False, batch_norm=False)
         self.down2 = Down(64, 128)
         self.down3 = Down(128, 256)
         self.down4 = Down(256, 512)
         self.down5 = Down(512, 512)
         self.down6 = Down(512, 512)
         self.down7 = Down(512, 512)
-        self.down8 = Down(512, 512, instance_norm = False)
+        self.down8 = Down(512, 512, batch_norm = False)
         
         self.up1 = Up(512, 512, dropout=True)
         self.up2 = Up(512*2, 512, dropout=True)
@@ -61,7 +61,7 @@ class UNet(nn.Module):
         self.up5 = Up(512*2, 256)
         self.up6 = Up(256*2, 128)
         self.up7 = Up(128*2, 64)
-        self.up8 = Up(64*2, out_channels, instance_norm=False)
+        self.up8 = Up(64*2, out_channels, batch_norm=False)
         
         self.tanh = nn.Tanh()
         
@@ -100,11 +100,11 @@ def test_unet():
 class Discriminator(nn.Module):
     def __init__(self, in_channels, patch=True):
         super().__init__()
-        self.conv1 = Down(in_channels, 64, activation=False, instance_norm=False)
+        self.conv1 = Down(in_channels, 64, activation=False, batch_norm=False)
         self.conv2 = Down(64, 128)
         self.conv3 = Down(128, 256)
         self.conv4 = Down(256, 512, stride=1)
-        self.conv5 = Down(512, 1, stride=1, instance_norm=False, activation=False)
+        self.conv5 = Down(512, 1, stride=1, batch_norm=False, activation=False)
         
         self.patch = patch
         if not patch:

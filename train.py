@@ -173,7 +173,7 @@ def train_gan(generator, discriminator, train_loader, optimizer_gen, optimizer_d
             progress.update(outer_task, advance=1)
             
     if save_model:
-        save = f"{save_path}/GAN_{epochs}_{lambda_recon}_{n}"
+        save = f"{save_path}/GAN_{epochs}_{lambda_recon}_{args.lr_gen}_{args.lr_disc}_{n}"
         if not os.path.exists(save):
             os.makedirs(save)
         torch.save(generator.state_dict(), f"{save}/generator.pth")
@@ -196,7 +196,7 @@ def train_gan_argparser():
     parser.add_argument("--verbose", type=bool, default=True, help="Whether to print training progress")
     parser.add_argument("--save_model", type=bool, default=True, help="Whether to save trained models")
     parser.add_argument("--save_path", type=str, default="Models", help="Path to save trained models")
-    parser.add_argument("--n", type=int, default=400, help="Number of images to visualize")
+    parser.add_argument("--n", type=int, default=1000, help="Number of images to visualize")
     parser.add_argument("--load_generator", type=str, default=None, help="Path to load generator model")
     parser.add_argument("--lambda_gp", type=float, default=10, help="Weight for the gradient penalty")
     parser.add_argument("--ab_path", type=str, default="ab/ab/ab1.npy", help="Path to AB images")
