@@ -8,9 +8,11 @@ class Up(nn.Module):
         self.up = nn.ConvTranspose2d(in_channels, out_channels, 4, stride=2, padding=1) #(n-1)s - 2p + k = 2n
         self.dropout = dropout
         self.batch_norm = batch_norm
-        self.bn = nn.BatchNorm2d(out_channels)
-        self.drop = nn.Dropout2d(0.5)
-        self.relu = nn.ReLU(True)
+        if batch_norm:
+            self.bn = nn.BatchNorm2d(out_channels)
+        if dropout:
+            self.drop = nn.Dropout2d(0.5)
+        self.relu = nn.LeakyReLU(0.2, True)
     
     def forward(self, x, skip=None):
         x = self.up(self.relu(x))
@@ -27,9 +29,11 @@ class Down(nn.Module):
     def __init__(self, in_channels, out_channels, stride=2, activation=True, batch_norm=True):
         super(Down, self).__init__()
         self.down = nn.Conv2d(in_channels, out_channels, 4, stride=stride, padding=1)
-        self.leaky_relu = nn.LeakyReLU(0.2)
-        self.bn = nn.BatchNorm2d(out_channels)
+        if batch_norm:
+            self.bn = nn.BatchNorm2d(out_channels)
         self.batch_norm = batch_norm
+        if activation:
+            self.leaky_relu = nn.LeakyReLU(0.2)
         self.activation = activation
         
     def forward(self, x):

@@ -19,9 +19,9 @@ def init_weights(model):
         if isinstance(m, torch.nn.Conv2d) or isinstance(m, torch.nn.ConvTranspose2d):
             torch.nn.init.normal_(m.weight, 0.0, 0.02)
 
-def train(generator, trainLoader, epochs=20):
+def train(generator, trainLoader, epochs=20, lr=1e-3):
     generator.to("cuda")
-    optim = torch.optim.Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    optim = torch.optim.Adam(generator.parameters(), lr=lr)
     loss_fn = torch.nn.L1Loss()
     
     with Progress() as progress:
@@ -40,7 +40,7 @@ def train(generator, trainLoader, epochs=20):
                 
                 loss += l.item()
                 n += x.size(0)
-                progress.update(inner_progress, advance=1, description=f"Loss: {loss / n}")
+                progress.update(inner_progress, advance=1, description=f"100*Loss: {(100 * loss / n):.5f}")
             progress.reset(inner_progress, total=len(trainLoader))
             progress.update(task, advance=1)
 
@@ -51,6 +51,7 @@ def main():
     parser.add_argument("--save_path", type=str, required=True, help="The path to save the model (e.g., 'Models/pretrained/resnet18.pth')")
     parser.add_argument("--epochs", type=int, default=20, help="The number of epochs to train for (default: 20)")
     parser.add_argument("--n_images", type=int, default=2000, help="The number of images to use for training (default: 2000)")
+    parser.add_argument("--lr", type=float, default=1e-3, help="The learning rate to use (default: 1e-3)")
     parser.add_argument("--UNet", type=bool, default=False, help="Whether to use a UNet model from models.py (default: False)")
     args = parser.parse_args()
     if args.model:
@@ -65,10 +66,12 @@ def main():
         generator = UNet(in_channels=1, out_channels=2, image_size=256)
         print(f"Generator is UNet from models.py")
         name = f"{args.save_path}/pretrained/generator_{args.epochs}_{args.n_images}.pth"
+        init_weights(generator)
     print("Saving at path", name)
-    init_weights(generator)
     
-    train(generator, dl, epochs=args.epochs)
+    generator = build_unet_from_model(torchvision.models.resnet18)
+    print(generator.load_state_dict(torch.load("Models/pretrained/unet_resnet18_20_8000.pth")))
+    train(generator, dl, epochs=args.epochs, lr=args.lr)
     
     if not os.path.exists(args.save_path+"/pretrained"):
         os.makedirs(args.save_path+"/pretrained")

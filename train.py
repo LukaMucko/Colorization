@@ -6,6 +6,8 @@ from models import UNet, Discriminator
 import argparse
 import os
 import json
+from pretrain import build_unet_from_model
+import torchvision
 
 def gradient_penalty(discriminator, real_ab, fake_ab, L, device):
     alpha = torch.rand(real_ab.size(0), 1, 1, 1, device=device)
@@ -102,7 +104,7 @@ def train_wgan(generator, discriminator, train_loader, optimizer_gen, optimizer_
         print("Done training:", "Models saved at", save)
 
 
-def train_gan(generator, discriminator, train_loader, optimizer_gen, optimizer_disc, lambda_recon=100, device='cuda', epochs=10, save_model=False, save_path='Models', visualize_every=-1, plot_images=False, n=400):
+def train_gan(generator, discriminator, train_loader, optimizer_gen, optimizer_disc, lambda_recon=100, device='cuda', epochs=10, save_model=False, save_path='Models', visualize_every=-1, plot_images=False, n=400, test_loader=None):
     #Discriminator is a patch discriminator
     generator.to(device)
     discriminator.to(device)
@@ -117,10 +119,11 @@ def train_gan(generator, discriminator, train_loader, optimizer_gen, optimizer_d
     
     with Progress() as progress:
         outer_task = progress.add_task("[cyan]Epochs", total=epochs)
-        inner_progress = progress.add_task("[yellow]Training...", total=len(train_loader))
+        inner_progress = progress.add_task("[red]Training...", total=len(train_loader))
         for epoch in range(1,epochs+1):
             running_gen_loss = 0.0
             running_disc_loss = 0.0
+            progress.update(outer_task, advance=1, description=f"[cyan]Epochs {epoch}/{epochs}")
             
             for i, (trainL, trainAB) in enumerate(train_loader):
                 trainL, trainAB = trainL.to(device), trainAB.to(device)
@@ -164,23 +167,23 @@ def train_gan(generator, discriminator, train_loader, optimizer_gen, optimizer_d
                 running_gen_loss+=gen_loss.item()
             
             
-                progress.update(inner_progress, advance=1, description=f"[cyan]Training... [Gen Loss: {running_gen_loss / (i + 1):.4f}] [Disc Loss: {running_disc_loss / (i + 1):.4f}]")
+                progress.update(inner_progress, advance=1, description=f"[red]Training... [Gen Loss: {running_gen_loss / (i + 1):.4f}] [Disc Loss: {running_disc_loss / (i + 1):.4f}]")
                     
             if plot_images and (epoch % visualize_every == 0 or epoch==1):
-                        visualize(generator, train_loader, device=device, n=1)
+                print(f"Epoch {epoch}/{epochs}")
+                visualize(generator, test_loader, device=device, n=5)
 
             progress.reset(inner_progress, total=len(train_loader))
-            progress.update(outer_task, advance=1)
             
     if save_model:
-        save = f"{save_path}/GAN_{epochs}_{lambda_recon}_{args.lr_gen}_{args.lr_disc}_{n}"
+        save = f"{save_path}/GAN_{epochs}_{lambda_recon}_{n}"
         if not os.path.exists(save):
             os.makedirs(save)
         torch.save(generator.state_dict(), f"{save}/generator.pth")
         torch.save(discriminator.state_dict(), f"{save}/discriminator.pth")
         
-    np.save(f"{save}/generator_losses.npy", np.array(gen_losses))
-    np.save(f"{save}/discriminator_losses.npy", np.array(disc_losses))
+        np.save(f"{save}/generator_losses.npy", np.array(gen_losses))
+        np.save(f"{save}/discriminator_losses.npy", np.array(disc_losses))
     
     print("Done training:", "Models saved at", save)
 
@@ -201,6 +204,8 @@ def train_gan_argparser():
     parser.add_argument("--lambda_gp", type=float, default=10, help="Weight for the gradient penalty")
     parser.add_argument("--ab_path", type=str, default="ab/ab/ab1.npy", help="Path to AB images")
     parser.add_argument("--l_path", type=str, default="l/gray_scale.npy", help="Path to L images")
+    parser.add_argument("--backbone", type=str, default=None, help="Whether to use a backbone for the generator")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
 
     return parser
 
@@ -225,7 +230,10 @@ if __name__ == "__main__":
     else:
         discriminator=Discriminator(3, patch=False)
     
-    generator = UNet(1, 2)
+    if args.backbone:
+        generator = build_unet_from_model(torchvision.models.resnet18, n_output=2, size=256)
+    else:
+        generator = UNet(1, 2)
 
     if args.load_generator:
         print(generator.load_state_dict(torch.load(args.load_generator)))
@@ -233,7 +241,7 @@ if __name__ == "__main__":
     
     optimizer_gen = torch.optim.Adam(generator.parameters(), lr=args.lr_gen, betas = (0.5, 0.999))
     optimizer_disc = torch.optim.Adam(discriminator.parameters(), lr=args.lr_disc, betas = (0.5, 0.999))
-    trainLoader = load_npy_data(args.ab_path, args.l_path, size=256, n=args.n, batch_size=32, test=False, num_workers=4, pin_memory=True)
+    trainLoader = load_npy_data(args.ab_path, args.l_path, size=256, n=args.n, batch_size=args.batch_size, test=False, num_workers=4, pin_memory=True)
     
     print("Training...")
     print(json.dumps(args.__dict__, indent=4))
