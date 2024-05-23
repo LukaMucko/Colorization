@@ -27,14 +27,13 @@ class CocoDataset(Dataset):
         ab = img[[1, 2], ...] / 110.
         return l, ab
 
-def get_loaders(path="/lustre/home/lmucko/.fastai/data/coco_sample/train_sample", batch_size=16, num_workers=4):
-    np.random.seed(123)
+def get_loaders(path="/lustre/home/lmucko/.fastai/data/coco_sample/train_sample", batch_size=16, num_workers=4, n=8000):
     paths = glob.glob(path+"/*.jpg")
-    
-    paths_subset = np.random.choice(paths, 10_000, replace=False) # choosing 1000 images randomly
-    rand_idxs = np.random.permutation(10_000)
-    train_idxs = rand_idxs[:8000] # choosing the first 8000 as training set
-    val_idxs = rand_idxs[8000:] # choosing last 2000 as validation set
+    n = min(n, 10000)
+    paths_subset = np.random.choice(paths, 10000, replace=False)
+    rand_idxs = np.random.permutation(10000)
+    train_idxs = rand_idxs[:n] 
+    val_idxs = rand_idxs[n:]
     train_paths = paths_subset[train_idxs]
     val_paths = paths_subset[val_idxs]
     

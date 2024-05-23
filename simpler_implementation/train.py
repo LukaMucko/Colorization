@@ -63,8 +63,8 @@ class LitModel():
         
         return gen_loss.item(), disc_loss.item()
         
-    def save_model(self, path, name):
-        torch.save(self.generator.state_dict(), path, name)
+    def save_model(self, path):
+        torch.save(self.generator.state_dict(), path)
         
     def visualize(self, batch):
         data.visualize(self.generator, batch)
@@ -76,3 +76,6 @@ class LitModel():
         plt.ylabel('Loss')
         plt.legend()
         plt.show()
+        
+    def load_model(self, path):
+        print(self.generator.load_state_dict(torch.load(path)))

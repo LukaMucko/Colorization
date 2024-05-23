@@ -106,10 +106,8 @@ class Discriminator(nn.Module):
         if not patch:
             self.fc = nn.Linear(1*30*30, 1)
         
-    def forward(self, x):
-        if len(x) == 2:
-            l, ab = x
-            x = torch.cat([l, ab], dim=1)
+    def forward(self, l, ab):
+        x = torch.cat([l, ab], dim=1)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
