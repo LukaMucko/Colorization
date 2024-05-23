@@ -28,6 +28,7 @@ class CocoDataset(Dataset):
         return l, ab
 
 def get_loaders(path="/lustre/home/lmucko/.fastai/data/coco_sample/train_sample", batch_size=16, num_workers=4, n=8000):
+    np.random.seed(42069)
     paths = glob.glob(path+"/*.jpg")
     n = min(n, 10000)
     paths_subset = np.random.choice(paths, 10000, replace=False)
@@ -73,7 +74,7 @@ def show_batch(dataloader):
     plt.show()
     plt.close() 
 
-def visualize(generator, data, device="cuda", n=5):
+def visualize(generator, data, device="cuda", n=5, transpose=False):
     generator.to(device)
     generator.eval()
     if isinstance(data, DataLoader):
