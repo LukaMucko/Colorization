@@ -63,8 +63,10 @@ class LitModel():
         
         return gen_loss.item(), disc_loss.item()
         
-    def save_model(self, path):
+    def save_model(self, path, discriminator_path = None):
         torch.save(self.generator.state_dict(), path)
+        if discriminator_path:
+            torch.save(self.discriminator.state_dict(), discriminator_path)
         
     def visualize(self, batch):
         data.visualize(self.generator, batch)
@@ -77,5 +79,7 @@ class LitModel():
         plt.legend()
         plt.show()
         
-    def load_model(self, path):
+    def load_model(self, path, discriminator_path = None):
         print(self.generator.load_state_dict(torch.load(path)))
+        if discriminator_path:
+            print(self.discriminator.load_state_dict(torch.load(discriminator_path)))

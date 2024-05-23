@@ -89,30 +89,55 @@ def visualize(generator, data, device="cuda", n=5, transpose=False):
     with torch.no_grad():
         pred_ab = generator(gray_imgs).detach()
     generator.train()
-    fig, axs = plt.subplots(nrows=3, ncols=n, figsize=(5*n, 10))
+    
+    if transpose:
+        fig, axs = plt.subplots(nrows=n, ncols=3, figsize=(15, 5*n))
+    else:
+        fig, axs = plt.subplots(nrows=3, ncols=n, figsize=(5*n, 10))
 
     if n == 1:
         axs = np.expand_dims(axs, axis=0)
 
     for i in range(n):
-        ax = axs[0, i]
-        ax.imshow(np.squeeze(gray_imgs[i].cpu().numpy(), 0), cmap='gray')
-        ax.set_title('Grayscale Image')
-        ax.axis('off')
-        
-        # Generated color image
-        gen_img = lab2rgb(gray_imgs[i], pred_ab[i])
-        ax = axs[1, i]
-        ax.imshow(gen_img)
-        ax.set_title('Generated Color Image')
-        ax.axis('off')
-        
-        # Real color image
-        real_img = lab2rgb(gray_imgs[i], color_imgs[i])
-        ax = axs[2, i]
-        ax.imshow(real_img)
-        ax.set_title('Real Color Image')
-        ax.axis('off')
+        if transpose:
+                        # Grayscale Image
+            ax = axs[i, 0]
+            ax.imshow(np.squeeze(gray_imgs[i].cpu().numpy(), 0), cmap='gray')
+            ax.set_title('Grayscale Image')
+            ax.axis('off')
+
+            # Generated color image
+            gen_img = lab2rgb(gray_imgs[i].cpu(), pred_ab[i].cpu())
+            ax = axs[i, 1]
+            ax.imshow(gen_img)
+            ax.set_title('Generated Color Image')
+            ax.axis('off')
+
+            # Real color image
+            real_img = lab2rgb(gray_imgs[i].cpu(), color_imgs[i].cpu())
+            ax = axs[i, 2]
+            ax.imshow(real_img)
+            ax.set_title('Real Color Image')
+            ax.axis('off')
+        else:
+            ax = axs[0, i]
+            ax.imshow(np.squeeze(gray_imgs[i].cpu().numpy(), 0), cmap='gray')
+            ax.set_title('Grayscale Image')
+            ax.axis('off')
+            
+            # Generated color image
+            gen_img = lab2rgb(gray_imgs[i], pred_ab[i])
+            ax = axs[1, i]
+            ax.imshow(gen_img)
+            ax.set_title('Generated Color Image')
+            ax.axis('off')
+            
+            # Real color image
+            real_img = lab2rgb(gray_imgs[i], color_imgs[i])
+            ax = axs[2, i]
+            ax.imshow(real_img)
+            ax.set_title('Real Color Image')
+            ax.axis('off')
     
     plt.show()
     plt.close()
